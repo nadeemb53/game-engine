@@ -106,7 +106,7 @@ impl PhysicsWorld {
                         detection::check_circle_line(body_b, j, body_a, i)
                     }
                     // No need to bind inner shape data if not used by the check function
-                    (&Shape::Line(_), &Shape::Line(_)) => { 
+                    (&Shape::Line(_), &Shape::Line(_)) => {
                         detection::check_line_line(body_a, i, body_b, j)
                     }
                     // Polygon Collision (Not Implemented Yet)
@@ -117,9 +117,11 @@ impl PhysicsWorld {
                         let manifold = detection::check_circle_polygon(body_b, j, body_a, i);
                         manifold.map(|mut m| { m.normal = -m.normal; m })
                     }
+                    (&Shape::Polygon(_), &Shape::Polygon(_)) => {
+                        detection::check_polygon_polygon(body_a, i, body_b, j)
+                    }
                     (&Shape::Polygon(_), &Shape::Line(_)) => None, // TODO
                     (&Shape::Line(_), &Shape::Polygon(_)) => None, // TODO
-                    (&Shape::Polygon(_), &Shape::Polygon(_)) => None, // TODO
                 };
 
                 if let Some(manifold) = manifold {
@@ -207,14 +209,16 @@ impl PhysicsWorld {
 
     /// Resolves detected collisions using simple positional correction.
     fn resolve_collisions(&mut self) {
-        let contacts = self.contacts.clone();
+        let contacts = self.contacts.clone(); // Clone contacts for iteration
 
-        // 1. Apply impulses
-        for manifold in &contacts {
-             self.apply_collision_impulse(manifold);
+        // 1. Apply impulses iteratively
+        for _ in 0..self.solver_iterations { // Use world's solver iterations
+            for manifold in &contacts {
+                self.apply_collision_impulse(manifold);
+            }
         }
 
-        // 2. Apply positional correction (stabilization)
+        // 2. Apply positional correction (stabilization) once after impulses
         for manifold in &contacts {
              self.apply_positional_correction(manifold);
         }

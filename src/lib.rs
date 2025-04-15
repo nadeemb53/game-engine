@@ -20,3 +20,12 @@ pub mod integration;
 pub mod collision;
 pub mod shapes;
 pub mod world;
+pub mod common;
+
+// Re-export key types for easier use
+pub use math::vec2::Vec2;
+pub use objects::rigid_body::RigidBody;
+pub use shapes::{Shape, Circle, LineSegment, Polygon};
+pub use constraints::{DistanceConstraint, PinJoint, Constraint};
+pub use world::PhysicsWorld;
+pub use common::Material;

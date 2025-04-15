@@ -1,11 +1,14 @@
 use crate::math::vec2::Vec2;
 use crate::shapes::Shape;
+use crate::common::Material;
+use crate::collision::AABB; // Import AABB
 
 #[derive(Debug, Clone, PartialEq)] // Removed Copy
 pub struct RigidBody {
     // Geometry
     pub shape: Shape,
     pub local_center_of_mass: Vec2, // Offset from shape's origin to center of mass
+    pub material: Material, // Physical material properties
 
     // Primary state
     pub position: Vec2, // World position of the center of mass
@@ -79,6 +82,7 @@ impl RigidBody {
         Self {
             shape,
             local_center_of_mass: local_com,
+            material: Material::default(),
             position: initial_position,
             rotation: 0.0,
             linear_velocity: Vec2::ZERO,
@@ -106,6 +110,7 @@ impl RigidBody {
         Self {
             shape,
             local_center_of_mass: local_com,
+            material: Material::default(),
             position: world_com,
             rotation,
             linear_velocity: Vec2::ZERO,
@@ -142,6 +147,7 @@ impl RigidBody {
          Self {
             shape,
             local_center_of_mass: local_com,
+            material: Material::default(),
             position: Vec2::ZERO,
             rotation: 0.0,
             linear_velocity: Vec2::ZERO,
@@ -152,6 +158,39 @@ impl RigidBody {
             inv_mass,
             inertia: final_inertia,
             inv_inertia,
+        }
+    }
+
+    /// Calculates the world-space Axis-Aligned Bounding Box (AABB) for this body.
+    pub fn calculate_aabb(&self) -> AABB {
+        match &self.shape {
+            Shape::Circle(circle) => {
+                // AABB for a circle is simply the center +/- radius
+                let radius_vec = Vec2::new(circle.radius, circle.radius);
+                AABB::new(self.position - radius_vec, self.position + radius_vec)
+            }
+            Shape::Line(segment) => {
+                // Transform endpoints to world space
+                let world_a = self.position + (segment.a - self.local_center_of_mass).rotate(self.rotation);
+                let world_b = self.position + (segment.b - self.local_center_of_mass).rotate(self.rotation);
+                // AABB::from_points handles min/max correctly
+                AABB::from_points(&[world_a, world_b]).unwrap_or_else(|| {
+                    // Fallback if line is degenerate (shouldn't happen ideally)
+                    AABB::new(self.position, self.position)
+                })
+            }
+            Shape::Polygon(polygon) => {
+                // Transform all vertices to world space and find min/max
+                let world_shape_origin = self.position - self.local_center_of_mass.rotate(self.rotation);
+                let world_vertices: Vec<Vec2> = polygon.vertices.iter()
+                    .map(|&v| world_shape_origin + v.rotate(self.rotation))
+                    .collect();
+
+                AABB::from_points(&world_vertices).unwrap_or_else(|| {
+                     // Fallback if polygon is degenerate
+                     AABB::new(self.position, self.position)
+                })
+            }
         }
     }
 
