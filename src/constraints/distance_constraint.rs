@@ -1,6 +1,7 @@
 use crate::math::vec2::Vec2;
 use crate::objects::rigid_body::RigidBody;
 use super::Constraint; // Import the new trait
+use std::any::Any; // Import Any
  // Added Shape, Circle
 
 /// A constraint that keeps two points on two bodies at a fixed distance.
@@ -96,6 +97,11 @@ impl Constraint for DistanceConstraint {
 
         // Note: This doesn't handle rotation induced by the position change.
         // More advanced PBD solvers might include angular corrections.
+    }
+
+    // Implement the as_any method
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 

@@ -1,4 +1,5 @@
 use crate::objects::rigid_body::RigidBody;
+use std::any::Any;
 
 pub mod distance_constraint;
 pub mod pin_joint;
@@ -8,10 +9,13 @@ pub use distance_constraint::DistanceConstraint;
 pub use pin_joint::PinJoint;
 
 /// A trait representing a physics constraint.
-pub trait Constraint {
+pub trait Constraint: Any {
     /// Solves the constraint by adjusting body positions.
     /// Takes a mutable slice of all bodies in the world.
     fn solve_position(&self, bodies: &mut [RigidBody]);
+
+    /// Returns the constraint as a `&dyn Any` reference.
+    fn as_any(&self) -> &dyn Any;
 
     // We could add methods for solve_velocity, getters for body indices etc. later
 }

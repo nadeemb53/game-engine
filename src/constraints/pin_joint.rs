@@ -1,6 +1,7 @@
 use crate::math::vec2::Vec2;
 use crate::objects::rigid_body::RigidBody;
 use super::Constraint; // Import the trait
+use std::any::Any; // Import Any
 // use crate::constraints::distance_constraint::DistanceConstraint; // No longer needed
  // Added Shape, Circle
 
@@ -67,15 +68,21 @@ impl Constraint for PinJoint {
         }
 
         // 5. Calculate correction magnitude (scalar)
-        let correction_scalar = 1.0 / total_inv_mass; // Simplified: scale the delta vector
+        let correction_scalar = 1.0 / total_inv_mass; // PBD: Correct full error in one step
 
         // 6. Apply position corrections
+        let correction_vector = delta * correction_scalar;
         if body_a.inv_mass > 0.0 {
-             body_a.position = body_a.position + delta * (body_a.inv_mass * correction_scalar);
+            body_a.position += correction_vector * body_a.inv_mass;
         }
         if body_b.inv_mass > 0.0 {
-            body_b.position = body_b.position - delta * (body_b.inv_mass * correction_scalar);
+            body_b.position -= correction_vector * body_b.inv_mass;
         }
+    }
+
+    // Implement the as_any method
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
