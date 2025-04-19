@@ -11,7 +11,7 @@ pub fn check_collision(
     body_a_idx: usize,
     body_b: &RigidBody,
     body_b_idx: usize,
-    should_log_collisions: bool, // Keep log flag for now
+    should_log_collisions: bool,
 ) -> Option<CollisionManifold> {
     // Ensure we always handle Circle-Polygon the same way, regardless of order
     match (&body_a.shape, &body_b.shape) {
@@ -19,7 +19,7 @@ pub fn check_collision(
             check_circle_circle(body_a, body_b, body_a_idx, body_b_idx)
         }
         (Shape::Circle(_), Shape::Polygon(_)) => {
-            check_circle_polygon(body_a, body_a_idx, body_b, body_b_idx, should_log_collisions) // Pass log flag
+            check_circle_polygon(body_a, body_a_idx, body_b, body_b_idx, should_log_collisions)
         }
         (Shape::Polygon(_), Shape::Circle(_)) => {
             // Swap order so A is always Circle, B is Polygon
@@ -28,7 +28,7 @@ pub fn check_collision(
                 let temp_idx = m.body_a_idx;
                 m.body_a_idx = m.body_b_idx;
                 m.body_b_idx = temp_idx;
-                m.normal = -m.normal; // Normal should point from original A (poly) to original B (circle)
+                m.normal = -m.normal;
                 m
             })
         }
@@ -69,8 +69,8 @@ pub fn check_collision(
 pub fn check_circle_circle(
     body_a: &RigidBody,
     body_b: &RigidBody,
-    idx_a: usize, // Used for manifold
-    idx_b: usize, // Used for manifold
+    idx_a: usize,
+    idx_b: usize,
 ) -> Option<CollisionManifold> {
     let shape_a = match body_a.shape {
         Shape::Circle(ref circle) => circle,
@@ -98,7 +98,7 @@ pub fn check_circle_circle(
         // penetration_depth will be positive for overlap, near zero for contact.
 
         let normal = if distance > EPSILON {
-            (pos_b - pos_a).normalize() // Normal points from A to B
+            (pos_b - pos_a).normalize()
         } else {
             // Bodies are coincident or extremely close, assign a default normal
             Vec2::new(1.0, 0.0)
@@ -113,7 +113,7 @@ pub fn check_circle_circle(
             body_a_idx: idx_a,
             body_b_idx: idx_b,
             normal,
-            depth: penetration_depth.max(0.0), // Ensure depth is non-negative
+            depth: penetration_depth.max(0.0),
             contact,
         })
     } else {
@@ -127,7 +127,7 @@ pub fn check_circle_circle(
 fn closest_point_on_segment(segment_a: Vec2, segment_b: Vec2, point: Vec2) -> (Vec2, f64) {
     let segment_vec = segment_b - segment_a;
     let length_sq = segment_vec.magnitude_squared();
-    if length_sq < 1e-12 { // Treat as a point if segment is too short
+    if length_sq < 1e-12 {
         return (segment_a, 0.0);
     }
 
@@ -153,7 +153,7 @@ pub fn check_circle_line(
 ) -> Option<CollisionManifold> {
     let circle = match body_a.shape {
         Shape::Circle(c) => c,
-        _ => return None, // Or panic
+        _ => return None,
     };
     let line = match body_b.shape {
         Shape::Line(l) => l,
@@ -178,7 +178,7 @@ pub fn check_circle_line(
         let penetration_depth = circle.radius - distance;
 
         let collision_normal = if distance > 1e-10 {
-            dist_vec * (1.0 / distance) // Normal from closest point on line towards circle center
+            dist_vec * (1.0 / distance)
         } else {
             // Circle center is exactly on the line segment, need a fallback normal.
             // Using the line segment's perpendicular might work, but requires care
@@ -194,12 +194,12 @@ pub fn check_circle_line(
         Some(CollisionManifold {
             body_a_idx,
             body_b_idx,
-            normal: collision_normal, // Normal points from Line towards Circle
+            normal: collision_normal,
             depth: penetration_depth,
             contact: contact_point,
         })
     } else {
-        None // No collision
+        None
     }
 }
 
@@ -207,11 +207,11 @@ pub fn check_circle_line(
 /// Returns the intersection point and parameters (t, u) if they intersect strictly within segments (0 < t < 1, 0 < u < 1),
 /// None otherwise. This version focuses on point intersection, not overlap.
 fn intersect_line_segments(
-    a1: Vec2, a2: Vec2, // Endpoints of segment A
-    b1: Vec2, b2: Vec2, // Endpoints of segment B
+    a1: Vec2, a2: Vec2,
+    b1: Vec2, b2: Vec2,
 ) -> Option<(Vec2, f64, f64)> {
-    let d1 = a2 - a1; // Direction vector of segment A
-    let d2 = b2 - b1; // Direction vector of segment B
+    let d1 = a2 - a1;
+    let d2 = b2 - b1;
     let delta_start = b1 - a1;
 
     let denominator = d1.cross(d2);
@@ -257,7 +257,7 @@ pub fn check_line_line(
     // Check for intersection
     if let Some((intersection_point, _t, _u)) = intersect_line_segments(a1_world, a2_world, b1_world, b2_world) {
         // Segments intersect
-        let d2_world = b2_world - b1_world; // Direction vector of line B in world space
+        let d2_world = b2_world - b1_world;
 
         // Calculate normal (perpendicular to line B, arbitrary direction for now)
         let normal = if d2_world.magnitude_squared() > 1e-12 {
@@ -286,7 +286,7 @@ pub fn check_line_line(
         })
 
     } else {
-        None // No intersection
+        None
     }
 }
 
@@ -402,7 +402,7 @@ pub fn check_circle_polygon(
         }
     }
 
-    let vertex_axis_candidate = closest_vertex_world - circle_world_pos; // Points A->B
+    let vertex_axis_candidate = closest_vertex_world - circle_world_pos;
 
     if vertex_axis_candidate.magnitude_squared() < EPSILON * EPSILON {
         if min_penetration == f64::MAX { return None; }
@@ -465,7 +465,7 @@ fn find_support_point(body: &RigidBody, polygon: &Polygon, direction: Vec2) -> V
     let mut support_point = if !polygon.vertices.is_empty() {
         world_shape_origin + polygon.vertices[0].rotate(rotation)
     } else {
-        body.position // Fallback to CoM if polygon is somehow empty
+        body.position
     };
 
     for vertex in &polygon.vertices {
@@ -489,7 +489,7 @@ pub fn check_polygon_polygon(
 ) -> Option<CollisionManifold> {
     let poly_a = match &body_a.shape {
         Shape::Polygon(p) => p,
-        _ => return None, // Or panic
+        _ => return None,
     };
     let poly_b = match &body_b.shape {
         Shape::Polygon(p) => p,
@@ -524,8 +524,8 @@ pub fn check_polygon_polygon(
         let (min_b, max_b) = project_polygon_onto_axis(body_b, poly_b, axis);
 
         let overlap = (max_a.min(max_b)) - (min_a.max(min_b));
-        if overlap < -EPSILON { // Allow for tiny negative overlap due to float errors
-            return None; // Found a separating axis
+        if overlap < -EPSILON {
+            return None;
         } else {
             let non_negative_overlap = overlap.max(0.0);
             if non_negative_overlap < min_overlap {
@@ -542,8 +542,8 @@ pub fn check_polygon_polygon(
         let (min_b, max_b) = project_polygon_onto_axis(body_b, poly_b, axis);
 
         let overlap = (max_a.min(max_b)) - (min_a.max(min_b));
-         if overlap < -EPSILON { // Allow for tiny negative overlap due to float errors
-            return None; // Found a separating axis
+         if overlap < -EPSILON {
+            return None;
         } else {
             let non_negative_overlap = overlap.max(0.0);
              if non_negative_overlap < min_overlap {
@@ -555,10 +555,10 @@ pub fn check_polygon_polygon(
 
     // --- If we got here, they are colliding ---
     // Ensure the normal points from B to A
-    let center_a = body_a.position; 
+    let center_a = body_a.position;
     let center_b = body_b.position;
     let _direction = center_a - center_b;
-    let normal = smallest_axis; // Normal points B -> A
+    let normal = smallest_axis;
 
     // --- Calculate Contact Points (Approximate) ---
     // Find support point on B in the direction of the normal (most penetrated point on B)
