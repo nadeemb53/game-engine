@@ -8,36 +8,36 @@
  
  This is a 2D physics engine designed for simulations and games. Built with Rust, it aims to be fast and reliable. Here's what it offers:
  
- *   Vector math (`Vec2`)
- *   Rigid bodies with mass, inertia, position, linear/angular velocity, forces, and torque.
- *   Shapes: `Circle`, `LineSegment`, `Polygon` (convex).
- *   Constraint system (e.g., `DistanceConstraint`, `PinJoint`).
- *   Collision detection for various shape pairs (`Circle`/`Circle`, `Circle`/`Line`, `Line`/`Line`, `Circle`/`Polygon`, `Polygon`/`Polygon`) using techniques like the Separating Axis Theorem (SAT).
- *   Collision resolution: Impulse-based (with restitution/bounciness) + positional correction for stability.
- *   A `PhysicsWorld` to manage bodies, constraints, and simulation steps.
+-   Vector math (`Vec2`)
+-   Rigid bodies with mass, inertia, position, linear/angular velocity, forces, and torque.
+-   Shapes: `Circle`, `LineSegment`, `Polygon` (convex).
+-   Constraint system (e.g., `DistanceConstraint`, `PinJoint`).
+-   Collision detection for various shape pairs (`Circle`/`Circle`, `Circle`/`Line`, `Line`/`Line`, `Circle`/`Polygon`, `Polygon`/`Polygon`) using techniques like the Separating Axis Theorem (SAT).
+-   Collision resolution: Impulse-based (with restitution/bounciness) + positional correction for stability.
+-   A `PhysicsWorld` to manage bodies, constraints, and simulation steps.
  
  ## Features
  
- *   **Rigid Body Dynamics:** Simulates how objects move and rotate using Semi-Implicit Euler integration.
- *   **Shapes:** Supports `Circle`, `LineSegment`, and convex `Polygon` shapes. Calculates mass and inertia automatically for polygons.
- *   **Constraints:** Includes common joints like `DistanceConstraint` (fixed links) and `PinJoint`.
- *   **Collision Detection:** Detects collisions between all supported shape pairs, using a spatial grid for efficiency with many objects.
- *   **Collision Resolution:** Handles collisions realistically using impulses (for bounces) and positional correction (to prevent sinking).
- *   **Materials:** Bodies have `Material` properties (friction, restitution) affecting collisions.
- *   **Extensible:** Designed in modules, making it easier to add new shapes, constraints, or features.
- *   **Built with Rust:** Aims for good performance and fewer bugs thanks to Rust's focus on safety and speed.
- *   **Thoroughly Tested:** Comprehensive test suite covering 100+ test cases across all components, ensuring reliability and correctness of the physics simulation.
+-   **Rigid Body Dynamics:** Simulates how objects move and rotate using Semi-Implicit Euler integration.
+-   **Shapes:** Supports `Circle`, `LineSegment`, and convex `Polygon` shapes. Calculates mass and inertia automatically for polygons.
+-   **Constraints:** Includes common joints like `DistanceConstraint` (fixed links) and `PinJoint`.
+-   **Collision Detection:** Detects collisions between all supported shape pairs, using a spatial grid for efficiency with many objects.
+-   **Collision Resolution:** Handles collisions realistically using impulses (for bounces) and positional correction (to prevent sinking).
+-   **Materials:** Bodies have `Material` properties (friction, restitution) affecting collisions.
+-   **Extensible:** Designed in modules, making it easier to add new shapes, constraints, or features.
+-   **Built with Rust:** Aims for good performance and fewer bugs thanks to Rust's focus on safety and speed.
+-   **Thoroughly Tested:** Comprehensive test suite covering 100+ test cases across all components, ensuring reliability and correctness of the physics simulation.
  
  ## Modules
  
- *   `math`: Basic 2D vector (`Vec2`) math.
- *   `shapes`: Shape definitions (`Circle`, `LineSegment`, `Polygon`, etc.).
- *   `objects`: The `RigidBody` definition.
- *   `common`: Shared components like `Material`.
- *   `integration`: Code for updating motion (integrator).
- *   `constraints`: Joints and links between bodies.
- *   `collision`: Collision detection (AABB, SpatialGrid, SAT) and contact info (`CollisionManifold`).
- *   `world`: The main `PhysicsWorld` that manages the simulation.
+-   `math`: Basic 2D vector (`Vec2`) math.
+-   `shapes`: Shape definitions (`Circle`, `LineSegment`, `Polygon`, etc.).
+-   `objects`: The `RigidBody` definition.
+-   `common`: Shared components like `Material`.
+-   `integration`: Code for updating motion (integrator).
+-   `constraints`: Joints and links between bodies.
+-   `collision`: Collision detection (AABB, SpatialGrid, SAT) and contact info (`CollisionManifold`).
+-   `world`: The main `PhysicsWorld` that manages the simulation.
  
  ## Getting Started (Basic Usage)
  
