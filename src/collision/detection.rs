@@ -281,6 +281,10 @@ pub fn check_circle_polygon(
     polygon_body: &RigidBody,
     polygon_body_idx: usize,
 ) -> Option<CollisionManifold> {
+    println!("--- Checking Circle-Polygon Collision ---");
+    println!("Circle Body: Pos={:?}, Rot={:.2}", circle_body.position, circle_body.rotation);
+    println!("Polygon Body: Pos={:?}, Rot={:.2}", polygon_body.position, polygon_body.rotation);
+
     let circle = match circle_body.shape {
         Shape::Circle(ref c) => c,
         _ => return None, // Should not happen
@@ -295,6 +299,7 @@ pub fn check_circle_polygon(
     // Calculate world position of the polygon's shape origin
     let polygon_world_origin = polygon_body.position - polygon_body.local_center_of_mass.rotate(polygon_body.rotation);
     let polygon_rotation = polygon_body.rotation;
+    println!("Polygon World Origin: {:?}", polygon_world_origin);
 
     // 1. Polygon edge normals
     for i in 0..polygon.vertices.len() {
@@ -302,7 +307,9 @@ pub fn check_circle_polygon(
         let p2_world = polygon_world_origin + polygon.vertices[(i + 1) % polygon.vertices.len()].rotate(polygon_rotation);
         let edge = p2_world - p1_world;
         if edge.magnitude_squared() > 1e-12 {
-            axes.push(edge.perpendicular().normalize()); // World normal directly
+            let axis = edge.perpendicular().normalize(); // World normal directly
+            axes.push(axis);
+            println!("  Adding Polygon Edge Normal Axis: {:?}", axis);
         }
     }
 
@@ -318,9 +325,12 @@ pub fn check_circle_polygon(
             closest_vertex_world = world_vertex;
         }
     }
+    println!("  Closest Polygon Vertex (World): {:?}", closest_vertex_world);
     let circle_to_vertex_vec = closest_vertex_world - circle_body.position;
     if circle_to_vertex_vec.magnitude_squared() > 1e-12 {
-        axes.push(circle_to_vertex_vec.normalize());
+        let axis = circle_to_vertex_vec.normalize();
+        axes.push(axis);
+        println!("  Adding Circle-to-Vertex Axis: {:?}", axis);
     }
 
     let mut min_overlap = f64::INFINITY;
@@ -330,10 +340,12 @@ pub fn check_circle_polygon(
     for axis in axes {
         // Ensure axis is valid (ignore zero vectors if normalization failed)
         if axis.magnitude_squared() < 1e-10 { continue; }
+        println!("Testing Axis: {:?}", axis);
 
         let (min_c, max_c) = project_shape_onto_axis(circle_body, axis);
         // Use the dedicated polygon projection function
         let (min_p, max_p) = project_polygon_onto_axis(polygon_body, polygon, axis);
+        println!("  Circle Proj: [{:.3}, {:.3}], Polygon Proj: [{:.3}, {:.3}]", min_c, max_c, min_p, max_p);
 
         // Check for non-overlap
         let overlap1 = max_c - min_p;
@@ -342,11 +354,14 @@ pub fn check_circle_polygon(
         // Use epsilon check for separation
         if overlap1 < -EPSILON || overlap2 < -EPSILON {
             // Separating axis found, no collision
+            println!("  Separating axis found. No collision.");
+            println!("--- End Circle-Polygon Check (Separated) ---");
             return None;
         }
 
         // Determine the overlap amount on this axis (ensure non-negative)
         let current_overlap = overlap1.min(overlap2).max(0.0);
+        println!("  Overlap on this axis: {:.3}", current_overlap);
 
         // Keep track of the minimum overlap and the corresponding axis
         if current_overlap < min_overlap {
@@ -355,15 +370,14 @@ pub fn check_circle_polygon(
         }
     }
 
+    println!("Min Overlap: {:.3}, MTV Axis (pre-flip): {:?}", min_overlap, mtv_axis);
+
     // If we reach here, the shapes are colliding.
     // The MTV axis currently points in an arbitrary direction along the axis of minimum overlap.
     // We need to ensure the normal points from body A (circle) to body B (polygon).
-    let center_to_center = polygon_body.position - circle_body.position;
-    let mut normal = mtv_axis;
-    if center_to_center.dot(normal) < 0.0 {
-        // Flip normal if it points from B to A
-        normal = -normal;
-    }
+    let normal = mtv_axis; // Use MTV axis directly as normal
+
+    println!("Final Normal: {:?}, Depth: {:.3}", normal, min_overlap);
 
     // TODO: Calculate accurate contact points.
     // For now, approximate contact point B on the polygon as the closest point on polygon
@@ -374,6 +388,8 @@ pub fn check_circle_polygon(
     // Approximate point B by pushing point A back into B by the depth
     let contact_point_b = contact_point_a - normal * min_overlap;
 
+    println!("Collision Detected: Normal={:?}, Depth={:.3}", normal, min_overlap);
+    println!("--- End Circle-Polygon Check (Collision) ---");
 
     Some(CollisionManifold {
         body_a_idx: circle_body_idx,
@@ -486,9 +502,6 @@ pub fn check_polygon_polygon(
     let center_a = body_a.position; 
     let center_b = body_b.position;
     let direction = center_a - center_b;
-    if smallest_axis.dot(direction) < 0.0 {
-        smallest_axis = -smallest_axis;
-    }
     let normal = smallest_axis; // Normal points B -> A
 
     // --- Calculate Contact Points (Approximate) ---

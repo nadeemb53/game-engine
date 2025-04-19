@@ -25,17 +25,18 @@ pub struct PhysicsWorld {
 
 impl PhysicsWorld {
     /// Constants for resolution
-    const RESTITUTION: f64 = 0.1; // Low bounciness
-    const POSITIONAL_CORRECTION_PERCENT: f64 = 0.2; // Penetration correction factor (e.g., 20%-80%)
-    const POSITIONAL_CORRECTION_SLOP: f64 = 0.01; // Allowable penetration depth
+    const RESTITUTION: f64 = 0.1;
+    // Make positional correction slightly less aggressive
+    const POSITIONAL_CORRECTION_PERCENT: f64 = 0.15; // Was 0.2
+    const POSITIONAL_CORRECTION_SLOP: f64 = 0.05; // Was 0.01
 
     /// Creates a new, empty physics world with default settings.
     pub fn new() -> Self {
         Self {
             bodies: Vec::new(),
             constraints: Vec::new(),
-            gravity: Vec2::new(0.0, -9.81), // Default gravity downwards
-            solver_iterations: 8, // A reasonable default for iterations
+            gravity: Vec2::new(0.0, 981.0), // Adjusted gravity to be positive y-down
+            solver_iterations: 16, // Increased iterations for stability
             contacts: Vec::new(), // Initialize contacts
         }
     }
@@ -77,58 +78,88 @@ impl PhysicsWorld {
     /// Checks for collisions between all pairs of bodies.
     fn check_collisions(&mut self) {
         self.contacts.clear(); // Clear contacts from previous step
+        println!("--- Starting Collision Check --- Bodies: {}", self.bodies.len());
 
         // Naive N^2 check (can be optimized later with broadphase)
         for i in 0..self.bodies.len() {
             for j in (i + 1)..self.bodies.len() {
+                // Log which pair is being checked
+                // println!("  Checking collision: Body {} vs Body {}", i, j);
+
                 let body_a = &self.bodies[i];
                 let body_b = &self.bodies[j];
 
-                // Simplified check for identical bodies
-                if i == j { continue; }
+                // Simplified check for identical bodies (shouldn't happen with i+1 loop)
+                // if i == j { continue; }
 
                 // Skip checks between two static bodies
                 if body_a.inv_mass == 0.0 && body_b.inv_mass == 0.0 {
+                    // println!("    Skipping static vs static ({}, {})", i, j);
                     continue;
                 }
 
                 // Dispatch to the correct collision check based on shapes
-                let manifold = match (&body_a.shape, &body_b.shape) {
+                let maybe_manifold = match (&body_a.shape, &body_b.shape) {
                     (&Shape::Circle(ref _c_a), &Shape::Circle(ref _c_b)) => {
+                        // println!("    -> Circle vs Circle ({}, {})", i, j);
                         detection::check_circle_circle(body_a, i, body_b, j)
                     }
                     (&Shape::Circle(ref _c), &Shape::Line(ref _l)) => {
-                        // Note the swapped indices in the call!
+                        // println!("    -> Circle vs Line ({}, {})", i, j);
                         detection::check_circle_line(body_a, i, body_b, j)
                     }
                     (&Shape::Line(ref _l), &Shape::Circle(ref _c)) => {
+                        // println!("    -> Line vs Circle ({}, {})", i, j);
                         // Note the swapped indices in the call!
                         detection::check_circle_line(body_b, j, body_a, i)
                     }
-                    // No need to bind inner shape data if not used by the check function
                     (&Shape::Line(_), &Shape::Line(_)) => {
+                        // println!("    -> Line vs Line ({}, {})", i, j);
                         detection::check_line_line(body_a, i, body_b, j)
                     }
-                    // Polygon Collision (Not Implemented Yet)
                     (&Shape::Circle(ref _c), &Shape::Polygon(ref _p)) => {
+                        println!("    -> Circle vs Polygon ({}, {})", i, j); // Log specific check
                         detection::check_circle_polygon(body_a, i, body_b, j)
                     }
                     (&Shape::Polygon(ref _p), &Shape::Circle(ref _c)) => {
+                        println!("    -> Polygon vs Circle ({}, {})", i, j); // Log specific check
                         let manifold = detection::check_circle_polygon(body_b, j, body_a, i);
+                        // Flip normal for consistency if manifold exists
                         manifold.map(|mut m| { m.normal = -m.normal; m })
                     }
                     (&Shape::Polygon(_), &Shape::Polygon(_)) => {
+                         // println!("    -> Polygon vs Polygon ({}, {})", i, j);
                         detection::check_polygon_polygon(body_a, i, body_b, j)
                     }
-                    (&Shape::Polygon(_), &Shape::Line(_)) => None, // TODO
-                    (&Shape::Line(_), &Shape::Polygon(_)) => None, // TODO
+                    (&Shape::Polygon(_), &Shape::Line(_)) => {
+                        // println!("    -> Polygon vs Line ({}, {}) - TODO", i, j);
+                        None
+                    }
+                    (&Shape::Line(_), &Shape::Polygon(_)) => {
+                         // println!("    -> Line vs Polygon ({}, {}) - TODO", i, j);
+                        None
+                    }
                 };
 
-                if let Some(manifold) = manifold {
+                if let Some(manifold) = maybe_manifold {
+                    // Log the generated manifold
+                    println!("    *** Collision Detected ({}, {}) ***", i, j);
+                    println!("        Depth:  {:.5}", manifold.depth);
+                    println!("        Normal: ({:.5}, {:.5})", manifold.normal.x, manifold.normal.y);
+                    // Add more details if needed (contact points etc)
+                    // Check for NaN/Infinity explicitly
+                    if !manifold.depth.is_finite() || !manifold.normal.x.is_finite() || !manifold.normal.y.is_finite() {
+                         eprintln!("        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                         eprintln!("        ! WARNING: NaN or Infinity detected in manifold ({}, {}) !", i, j);
+                         eprintln!("        ! Body A ({}): Pos={:?}, Vel={:?}, AngVel={:.4}", i, body_a.position, body_a.linear_velocity, body_a.angular_velocity);
+                         eprintln!("        ! Body B ({}): Pos={:?}, Vel={:?}, AngVel={:.4}", j, body_b.position, body_b.linear_velocity, body_b.angular_velocity);
+                         eprintln!("        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                    }
                     self.contacts.push(manifold);
                 }
             }
         }
+        println!("--- Finished Collision Check --- Contacts found: {}", self.contacts.len());
     }
 
     /// Applies impulse-based resolution for a single contact.
@@ -184,44 +215,46 @@ impl PhysicsWorld {
 
     /// Applies simple positional correction to resolve penetration.
     fn apply_positional_correction(&mut self, manifold: &CollisionManifold) {
+        // --- REVERT TEMPORARY TEST ---
+        /*
+        let body_a_inv_mass = self.bodies[manifold.body_a_idx].inv_mass;
+        let body_b_inv_mass = self.bodies[manifold.body_b_idx].inv_mass;
+        if body_a_inv_mass > 0.0 && body_b_inv_mass > 0.0 {
+            return;
+        }
+        */
+        // --- END REVERT ---
+
         let (body_a, body_b) = {
             let idx_a = manifold.body_a_idx;
             let idx_b = manifold.body_b_idx;
             if idx_a == idx_b { return; }
+            if idx_a >= self.bodies.len() || idx_b >= self.bodies.len() {
+                 eprintln!("Warning: Invalid body index in apply_positional_correction ({}, {}). Max index: {}", idx_a, idx_b, self.bodies.len() - 1);
+                 return;
+            }
             if idx_a < idx_b {
                 let (slice_a, slice_b) = self.bodies.split_at_mut(idx_b);
                 (&mut slice_a[idx_a], &mut slice_b[0])
-            } else { // idx_b < idx_a
+            } else {
                 let (slice_b, slice_a) = self.bodies.split_at_mut(idx_a);
                 (&mut slice_a[0], &mut slice_b[idx_b])
             }
         };
 
+        let total_inv_mass = body_a.inv_mass + body_b.inv_mass;
+         if total_inv_mass < EPSILON {
+             return;
+         }
+
         let correction_magnitude = (manifold.depth - PhysicsWorld::POSITIONAL_CORRECTION_SLOP).max(0.0)
-            / (body_a.inv_mass + body_b.inv_mass)
+            / total_inv_mass
             * PhysicsWorld::POSITIONAL_CORRECTION_PERCENT;
 
         let correction = manifold.normal * correction_magnitude;
 
         body_a.position -= correction * body_a.inv_mass;
         body_b.position += correction * body_b.inv_mass;
-    }
-
-    /// Resolves detected collisions using simple positional correction.
-    fn resolve_collisions(&mut self) {
-        let contacts = self.contacts.clone(); // Clone contacts for iteration
-
-        // 1. Apply impulses iteratively
-        for _ in 0..self.solver_iterations { // Use world's solver iterations
-            for manifold in &contacts {
-                self.apply_collision_impulse(manifold);
-            }
-        }
-
-        // 2. Apply positional correction (stabilization) once after impulses
-        for manifold in &contacts {
-             self.apply_positional_correction(manifold);
-        }
     }
 
     /// Advances the simulation by one time step `dt`.
@@ -242,15 +275,58 @@ impl PhysicsWorld {
         // 3. Collision Detection
         self.check_collisions();
 
-        // 4. Collision Resolution
-        self.resolve_collisions(); // Resolve penetration
+        // Clone contacts before mutable borrowing for resolution
+        let contacts_clone = self.contacts.clone();
 
-        // 5. Solve constraints (iteratively)
+        // 4. Resolve Collisions (Impulse and Positional Correction)
         for _ in 0..self.solver_iterations {
-            for constraint in &self.constraints {
-                constraint.solve_position(&mut self.bodies);
+            for manifold in &contacts_clone { // Iterate over clone
+                self.apply_collision_impulse(manifold);
             }
         }
+        // Apply positional correction after impulse resolution
+        for manifold in &contacts_clone { // Iterate over clone
+            println!("--- Applying Positional Correction ---");
+            println!("  Bodies: {} vs {}", manifold.body_a_idx, manifold.body_b_idx);
+            println!("  Depth: {:.3}, Normal: {:?}", manifold.depth, manifold.normal);
+            let body_a_pre_pos = self.bodies[manifold.body_a_idx].position;
+            let body_b_pre_pos = self.bodies[manifold.body_b_idx].position;
+
+            self.apply_positional_correction(manifold);
+
+            let body_a_post_pos = self.bodies[manifold.body_a_idx].position;
+            let body_b_post_pos = self.bodies[manifold.body_b_idx].position;
+            println!("  Body A Pos: {:?} -> {:?}", body_a_pre_pos, body_a_post_pos);
+            println!("  Body B Pos: {:?} -> {:?}", body_b_pre_pos, body_b_post_pos);
+            println!("--- End Positional Correction ---");
+        }
+        self.contacts.clear();
+
+        // 5. Solve constraints (iteratively)
+        println!("--- Starting Constraint Solving --- Iterations: {}", self.solver_iterations);
+        for i in 0..self.solver_iterations {
+            println!("  Constraint Iteration {}/{}", i + 1, self.solver_iterations);
+            // It's tricky to get constraint type name from Box<dyn Constraint> easily.
+            // Let's just number them for now.
+            for (constraint_idx, constraint) in self.constraints.iter().enumerate() {
+                println!("    Solving constraint #{}...", constraint_idx);
+                // Log positions of potentially involved bodies (assuming common constraints involve bodies 0 and 1)
+                // This is brittle, ideally constraint.solve would take indices or log itself
+                if self.bodies.len() > 1 {
+                    println!("      Pre-solve Body 0 pos: {:?}", self.bodies[0].position);
+                    println!("      Pre-solve Body 1 pos: {:?}", self.bodies[1].position);
+                }
+
+                constraint.solve_position(&mut self.bodies);
+
+                println!("    Constraint #{} solved.", constraint_idx);
+                 if self.bodies.len() > 1 {
+                    println!("      Post-solve Body 0 pos: {:?}", self.bodies[0].position);
+                    println!("      Post-solve Body 1 pos: {:?}", self.bodies[1].position);
+                }
+            }
+        }
+        println!("--- Finished Constraint Solving ---");
     }
 }
 
@@ -280,8 +356,8 @@ mod tests {
         let world = PhysicsWorld::new();
         assert!(world.bodies.is_empty());
         assert!(world.constraints.is_empty());
-        assert_eq!(world.gravity, Vec2::new(0.0, -9.81));
-        assert_eq!(world.solver_iterations, 8);
+        assert_eq!(world.gravity, Vec2::new(0.0, 981.0));
+        assert_eq!(world.solver_iterations, 16);
         assert!(world.contacts.is_empty()); // Check contacts init
     }
 
