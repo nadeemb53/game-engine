@@ -179,6 +179,8 @@
      world
  }
 
+```
+
  ### Simple Ragdoll
  ```rust
  use physics_engine::*;
@@ -264,6 +266,8 @@
      world
  }
 
+```
+
  ## Performance
  
  Performance is a key goal. The engine uses a Spatial Grid for broadphase collision detection to efficiently handle scenes with many objects.
@@ -294,6 +298,7 @@
  The physics engine is backed by a comprehensive test suite with over 100 test cases.
  
  Run the test suite with:
+
  ```
  cd physics_engine
  cargo test
@@ -314,10 +319,4 @@
      *   (Completed) Collision resolution uses restitution & friction (Coulomb model, iterative solver).
  4.  **(Next)** **Broadphase Collision Detection:**
      *   (Completed) Uniform Spatial Grid implemented.
- 5.  **Further Physics Enhancements:**
-     *   Air resistance / Drag models.
-     *   More constraint types (e.g., motors, angular limits).
-     *   More accurate contact point generation (e.g., clipping).
- 6.  **API & Usability:**
-     *   Refinement of the public API for improved ergonomics.
-     *   Comprehensive documentation generation.
+
