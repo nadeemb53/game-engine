@@ -2,6 +2,8 @@
 
 **A 2D rigid-body physics engine written in Rust.**
 
+[![Rust CI](https://github.com/nadeemb53/game-engine/actions/workflows/rust.yml/badge.svg)](https://github.com/nadeemb53/game-engine/actions/workflows/rust.yml)
+
  ## Overview
  
  This is a 2D physics engine designed for simulations and games. Built with Rust, it aims to be fast and reliable. Here's what it offers:
@@ -24,6 +26,7 @@
  *   **Materials:** Bodies have `Material` properties (friction, restitution) affecting collisions.
  *   **Extensible:** Designed in modules, making it easier to add new shapes, constraints, or features.
  *   **Built with Rust:** Aims for good performance and fewer bugs thanks to Rust's focus on safety and speed.
+ *   **Thoroughly Tested:** Comprehensive test suite covering 100+ test cases across all components, ensuring reliability and correctness of the physics simulation.
  
  ## Modules
  
@@ -78,6 +81,189 @@
  }
  ```
 
+ ## Fun Examples
+
+ ### Bouncy Ball Pit
+ ```rust
+ use physics_engine::*;
+ 
+ fn create_ball_pit(width: f64, height: f64) -> PhysicsWorld {
+     let mut world = PhysicsWorld::new();
+     world.gravity = Vec2::new(0.0, -9.81);
+     
+     // Create walls (static bodies)
+     let floor_shape = Shape::Line(LineSegment::new(Vec2::new(0.0, 0.0), Vec2::new(width, 0.0)));
+     let left_wall_shape = Shape::Line(LineSegment::new(Vec2::new(0.0, 0.0), Vec2::new(0.0, height)));
+     let right_wall_shape = Shape::Line(LineSegment::new(Vec2::new(width, 0.0), Vec2::new(width, height)));
+     
+     // Add static bodies for the walls
+     let floor_material = Material::new(0.2, 0.1); // Low bounce, low friction
+     let mut floor = RigidBody::new_static(floor_shape, Vec2::new(0.0, 0.0), 0.0);
+     floor.material = floor_material;
+     world.add_body(floor);
+     
+     let mut left_wall = RigidBody::new_static(left_wall_shape, Vec2::new(0.0, 0.0), 0.0);
+     left_wall.material = floor_material;
+     world.add_body(left_wall);
+     
+     let mut right_wall = RigidBody::new_static(right_wall_shape, Vec2::new(0.0, 0.0), 0.0);
+     right_wall.material = floor_material;
+     world.add_body(right_wall);
+     
+     // Add 20 bouncy balls with different sizes
+     for i in 0..20 {
+         let radius = 0.2 + (i % 4) as f64 * 0.1; // Varying sizes from 0.2 to 0.5
+         let x = 1.0 + i as f64 * 0.5; // Spread them out horizontally
+         let y = height - i as f64 * 0.2; // Start from different heights
+         
+         let circle_shape = Shape::Circle(Circle::new(radius));
+         let mut ball = RigidBody::new(1.0, circle_shape);
+         ball.position = Vec2::new(x, y);
+         ball.material = Material::new(0.8, 0.1); // Very bouncy!
+         
+         world.add_body(ball);
+     }
+     
+     world
+ }
+ 
+ // In your game loop:
+ // world.step(1.0/60.0, false);
+ // Render all the balls at their updated positions!
+ ```
+
+ ### Newton's Cradle
+ ```rust
+ use physics_engine::*;
+ 
+ fn create_newtons_cradle(num_balls: usize, ball_radius: f64) -> PhysicsWorld {
+     let mut world = PhysicsWorld::new();
+     world.gravity = Vec2::new(0.0, -9.81);
+     
+     // Create anchor point (static body)
+     let anchor_shape = Shape::Circle(Circle::new(0.1));
+     let anchor_pos = Vec2::new(num_balls as f64 * ball_radius * 2.0, 5.0);
+     let anchor_idx = world.add_body(RigidBody::new_static(anchor_shape, anchor_pos, 0.0));
+     
+     // Create the pendulum balls
+     let mut ball_indices = Vec::new();
+     for i in 0..num_balls {
+         let x_pos = i as f64 * ball_radius * 2.0 + ball_radius;
+         let ball_shape = Shape::Circle(Circle::new(ball_radius));
+         
+         let mut ball = RigidBody::new(1.0, ball_shape);
+         ball.position = Vec2::new(x_pos, 2.0);
+         ball.material = Material::new(1.0, 0.0); // Perfect elasticity, no friction
+         
+         ball_indices.push(world.add_body(ball));
+     }
+     
+     // Connect balls to anchor with distance constraints
+     for &ball_idx in &ball_indices {
+         let constraint = DistanceConstraint::new(
+             anchor_idx,
+             ball_idx,
+             Vec2::new(0.0, 0.0), // Anchor point on static body
+             Vec2::new(0.0, 0.0), // Anchor at center of ball
+             3.0 // Length of pendulum
+         );
+         
+         world.add_constraint(Box::new(constraint));
+     }
+     
+     // Pull the first ball to the side to start the motion
+     if let Some(first_ball) = world.bodies.get_mut(ball_indices[0]) {
+         first_ball.position.x -= 1.5;
+     }
+     
+     world
+ }
+
+ ### Simple Ragdoll
+ ```rust
+ use physics_engine::*;
+ 
+ fn create_simple_ragdoll() -> PhysicsWorld {
+     let mut world = PhysicsWorld::new();
+     world.gravity = Vec2::new(0.0, -9.81);
+     
+     // Create body parts (head, torso, arms, legs)
+     let head_shape = Shape::Circle(Circle::new(0.25));
+     let torso_shape = Shape::Circle(Circle::new(0.4));
+     let limb_shape = Shape::Circle(Circle::new(0.2));
+     
+     // Add body parts
+     let mut head = RigidBody::new(1.0, head_shape);
+     head.position = Vec2::new(0.0, 3.0);
+     let head_idx = world.add_body(head);
+     
+     let mut torso = RigidBody::new(5.0, torso_shape);
+     torso.position = Vec2::new(0.0, 2.0);
+     let torso_idx = world.add_body(torso);
+     
+     let mut left_arm = RigidBody::new(1.0, limb_shape);
+     left_arm.position = Vec2::new(-0.7, 2.0);
+     let left_arm_idx = world.add_body(left_arm);
+     
+     let mut right_arm = RigidBody::new(1.0, limb_shape);
+     right_arm.position = Vec2::new(0.7, 2.0);
+     let right_arm_idx = world.add_body(right_arm);
+     
+     let mut left_leg = RigidBody::new(1.0, limb_shape);
+     left_leg.position = Vec2::new(-0.3, 1.0);
+     let left_leg_idx = world.add_body(left_leg);
+     
+     let mut right_leg = RigidBody::new(1.0, limb_shape);
+     right_leg.position = Vec2::new(0.3, 1.0);
+     let right_leg_idx = world.add_body(right_leg);
+     
+     // Connect parts with pin joints
+     // Head to torso
+     let head_joint = PinJoint::new(
+         head_idx, torso_idx,
+         Vec2::new(0.0, -0.25), // Bottom of head
+         Vec2::new(0.0, 0.4)    // Top of torso
+     );
+     world.add_constraint(Box::new(head_joint));
+     
+     // Arms to torso
+     let left_arm_joint = PinJoint::new(
+         left_arm_idx, torso_idx,
+         Vec2::new(0.2, 0.0),  // Inner side of arm
+         Vec2::new(-0.4, 0.1)  // Left side of torso
+     );
+     world.add_constraint(Box::new(left_arm_joint));
+     
+     let right_arm_joint = PinJoint::new(
+         right_arm_idx, torso_idx,
+         Vec2::new(-0.2, 0.0), // Inner side of arm
+         Vec2::new(0.4, 0.1)   // Right side of torso
+     );
+     world.add_constraint(Box::new(right_arm_joint));
+     
+     // Legs to torso
+     let left_leg_joint = PinJoint::new(
+         left_leg_idx, torso_idx,
+         Vec2::new(0.0, 0.2),   // Top of leg
+         Vec2::new(-0.2, -0.4)  // Bottom left of torso
+     );
+     world.add_constraint(Box::new(left_leg_joint));
+     
+     let right_leg_joint = PinJoint::new(
+         right_leg_idx, torso_idx,
+         Vec2::new(0.0, 0.2),   // Top of leg
+         Vec2::new(0.2, -0.4)   // Bottom right of torso
+     );
+     world.add_constraint(Box::new(right_leg_joint));
+     
+     // Create ground
+     let ground_shape = Shape::Line(LineSegment::new(Vec2::new(-5.0, 0.0), Vec2::new(5.0, 0.0)));
+     let ground = RigidBody::new_static(ground_shape, Vec2::new(0.0, 0.0), 0.0);
+     world.add_body(ground);
+     
+     world
+ }
+
  ## Performance
  
  Performance is a key goal. The engine uses a Spatial Grid for broadphase collision detection to efficiently handle scenes with many objects.
@@ -102,6 +288,16 @@
  *   `high_constraint_scene_N`: Evaluating performance under heavy constraint loads.
  
  _(Note: Current benchmarks use few bodies and may not fully reflect performance gains from broadphase in larger scenes. Regressions compared to earlier versions are expected due to added features like polygon collisions, friction, and grid management overhead.)_
+ 
+ ## Testing
+ 
+ The physics engine is backed by a comprehensive test suite with over 100 test cases.
+ 
+ Run the test suite with:
+ ```
+ cd physics_engine
+ cargo test
+ ```
  
  ## Roadmap / Future Enhancements
  

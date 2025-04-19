@@ -247,7 +247,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
                  }
             }
 
-            self.world.step(dt);
+            self.world.step(dt, false);
         }
         Ok(())
     }

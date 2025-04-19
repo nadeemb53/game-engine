@@ -12,8 +12,8 @@ pub fn integrate(body: &mut RigidBody, dt: f64) {
     let linear_acceleration = body.force * body.inv_mass;
     // Update linear velocity (v = v + a*dt)
     body.linear_velocity = body.linear_velocity + linear_acceleration * dt;
-    // Update position (p = p + v*dt)
-    body.position = body.position + body.linear_velocity * dt;
+    // Update position (p = p + v*dt) - REMOVED FROM INTEGRATOR
+    // body.position = body.position + body.linear_velocity * dt;
 
     // --- Angular Motion --- //
     // Calculate angular acceleration (alpha = T/I = T * inv_I)
@@ -61,8 +61,9 @@ mod tests {
 
         integrate(&mut rb, dt);
 
-        assert!((rb.position.x - 1.0).abs() < EPSILON);
-        assert!((rb.position.y - -0.5).abs() < EPSILON);
+        // Position is no longer updated by integrate(), remove position assertions
+        // assert!((rb.position.x - 1.0).abs() < EPSILON);
+        // assert!((rb.position.y - -0.5).abs() < EPSILON);
         assert_eq!(rb.linear_velocity, Vec2::new(10.0, -5.0)); // Velocity unchanged
         assert_eq!(rb.force, Vec2::new(0.0, 0.0)); // Force cleared
     }
@@ -82,9 +83,10 @@ mod tests {
         assert!((rb.linear_velocity.x - 0.5).abs() < EPSILON);
         assert!((rb.linear_velocity.y - 0.0).abs() < EPSILON);
 
-        // p = p0 + v*dt = (0,0) + (0.5, 0)*0.1 = (0.05, 0)
-        assert!((rb.position.x - 0.05).abs() < EPSILON);
-        assert!((rb.position.y - 0.0).abs() < EPSILON);
+        // Position is no longer updated by integrate(), remove position assertions
+        // p = p0 + v*dt = (0,0) + (0.5, 0)*0.1 = (0.05, 0) 
+        // assert!((rb.position.x - 0.05).abs() < EPSILON);
+        // assert!((rb.position.y - 0.0).abs() < EPSILON);
         assert_eq!(rb.force, Vec2::new(0.0, 0.0)); // Force cleared
     }
 

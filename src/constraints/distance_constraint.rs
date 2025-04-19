@@ -52,51 +52,29 @@ impl Constraint for DistanceConstraint {
         // Get mutable references to the bodies involved.
         let (body_a, body_b) = super::get_mutable_body_pair(bodies, self.body_a_idx, self.body_b_idx);
 
-        // 1. Calculate world anchor points
         let anchor_a_world = body_a.position + self.anchor_a_local.rotate(body_a.rotation);
         let anchor_b_world = body_b.position + self.anchor_b_local.rotate(body_b.rotation);
-
-        // 2. Calculate delta vector and current distance
         let delta = anchor_b_world - anchor_a_world;
         let current_dist = delta.magnitude();
 
-        // 3. Check for zero distance (or very small distance)
-        if current_dist < 1e-10 { // Avoid division by zero / instability
-            return;
-        }
-
-        // 4. Calculate error
+        if current_dist < 1e-10 { return; }
         let error = current_dist - self.distance;
+        if error.abs() < 1e-10 { return; }
 
-        // No correction needed if error is negligible
-        if error.abs() < 1e-10 {
-            return;
-        }
-
-        // 5. Calculate correction direction
-        let direction = delta * (1.0 / current_dist); // Normalized direction using multiplication
-
-        // 6. Calculate total inverse mass
+        let direction = delta * (1.0 / current_dist);
         let total_inv_mass = body_a.inv_mass + body_b.inv_mass;
-
-        // 7. If both bodies are static, we can't do anything
-        if total_inv_mass == 0.0 {
-            return;
-        }
-
-        // 8. Calculate correction magnitude (scalar)
+        if total_inv_mass == 0.0 { return; }
         let correction_scalar = error / total_inv_mass;
 
-        // 9. Apply position corrections
+        let correction_a = direction * correction_scalar * body_a.inv_mass;
+        let correction_b = direction * correction_scalar * body_b.inv_mass;
+
         if body_a.inv_mass > 0.0 {
-             body_a.position = body_a.position + direction * correction_scalar * body_a.inv_mass;
+            body_a.position = body_a.position + correction_a;
         }
         if body_b.inv_mass > 0.0 {
-            body_b.position = body_b.position - direction * correction_scalar * body_b.inv_mass;
+            body_b.position = body_b.position - correction_b;
         }
-
-        // Note: This doesn't handle rotation induced by the position change.
-        // More advanced PBD solvers might include angular corrections.
     }
 
     // Implement the as_any method
