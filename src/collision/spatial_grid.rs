@@ -14,7 +14,6 @@ struct GridCell {
 #[derive(Debug)]
 pub struct SpatialGrid {
     bounds: AABB,          // The overall area covered by the grid
-    cell_size: f64,       // Width/height of each square grid cell
     inv_cell_size: f64,   // 1.0 / cell_size, cached for performance
     num_cols: usize,       // Number of columns in the grid
     num_rows: usize,       // Number of rows in the grid
@@ -52,7 +51,6 @@ impl SpatialGrid {
 
         SpatialGrid {
             bounds,
-            cell_size,
             inv_cell_size,
             num_cols,
             num_rows,
@@ -195,7 +193,6 @@ mod tests {
         assert_eq!(grid.num_cols, 5);
         assert_eq!(grid.num_rows, 5);
         assert_eq!(grid.cells.len(), 25);
-        assert_eq!(grid.cell_size, cell_size);
         assert_eq!(grid.inv_cell_size, 1.0 / cell_size);
         assert_eq!(grid.bounds, bounds);
     }

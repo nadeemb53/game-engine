@@ -1,19 +1,8 @@
 use crate::math::vec2::Vec2;
 use crate::objects::rigid_body::{RigidBody};
-use crate::shapes::{Polygon, Shape, Circle, LineSegment};
+use crate::shapes::{Polygon, Shape};
 use super::manifold::{CollisionManifold, ContactPoint};
 use std::f64::EPSILON;
-use std::f64::consts::PI;
-
-// Helper function to create rectangle vertices
-fn create_rectangle_vertices(center_x: f64, center_y: f64, half_width: f64, half_height: f64) -> Vec<Vec2> {
-    vec![
-        Vec2::new(center_x - half_width, center_y - half_height),
-        Vec2::new(center_x + half_width, center_y - half_height),
-        Vec2::new(center_x + half_width, center_y + half_height),
-        Vec2::new(center_x - half_width, center_y + half_height),
-    ]
-}
 
 /// Checks for collision between two rigid bodies.
 /// Returns an Option containing collision manifold information if a collision occurs.

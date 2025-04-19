@@ -1,30 +1,15 @@
 use crate::{
     objects::rigid_body::{RigidBody},
-    collision::{self, CollisionManifold, AABB},
-    constraints::{self, Constraint, DistanceConstraint, PinJoint},
+    collision::{self, CollisionManifold},
+    constraints::{Constraint, DistanceConstraint, PinJoint},
     math::vec2::Vec2,
-    shapes::{circle::Circle, line_segment::LineSegment, polygon::Polygon, Shape},
+    shapes::Shape,
 };
 use crate::integration::integrator;
 
-use std::collections::{HashMap, HashSet};
 use std::f64;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-const MAX_ITERATIONS: usize = 10;
-const SLEEP_THRESHOLD: f64 = 0.01;
-const GRAVITY: Vec2 = Vec2 { x: 0.0, y: 98.1 }; // Adjusted gravity value (e.g., 10x for simulation speed)
-const MIN_VELOCITY_FOR_SLEEP: f64 = 0.05;
-const MIN_ANGULAR_VELOCITY_FOR_SLEEP: f64 = 0.05;
-const TIME_TO_SLEEP: f64 = 0.5; // Seconds of low activity before sleeping
-
-const LINEAR_DAMPING: f64 = 0.995; // Slightly reduce linear velocity each step
-const ANGULAR_DAMPING: f64 = 0.995; // Slightly reduce angular velocity each step
 
 // Positional Correction Constants
-const POSITIONAL_CORRECTION_PERCENT: f64 = 0.2; // Penetration correction fraction (20%-80% is typical)
-const POSITIONAL_CORRECTION_SLOP: f64 = 0.01;   // Allowable penetration depth (avoids jitter)
 
 // Associated constant, not used directly in methods yet.
 #[allow(dead_code)] // Allow while unused
@@ -41,11 +26,7 @@ pub struct PhysicsWorld {
 }
 
 impl PhysicsWorld {
-    const GRAVITY: Vec2 = Vec2 { x: 0.0, y: -9.81 };
-    const SLEEP_EPSILON: f64 = 0.01; // Threshold for linear/angular velocity to consider sleeping
-    const TIME_TO_SLEEP: f64 = 0.5; // Time in seconds a body must be near stationary to sleep
     const COLLISION_ITERATIONS: usize = 10; // Number of iterations for collision resolution
-    const POSITION_CORRECTION_ITERATIONS: usize = 3; // Number of iterations for positional correction
     const POSITIONAL_CORRECTION_PERCENT: f64 = 0.2; // Penetration percentage to correct per iteration (typically 20-80%)
     const POSITIONAL_CORRECTION_SLOP: f64 = 0.01; // Minimum penetration depth to correct (allows for some overlap)
 
