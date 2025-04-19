@@ -581,7 +581,18 @@ mod tests {
     use crate::objects::rigid_body::RigidBody;
     use crate::shapes::{Circle, LineSegment, Polygon, Shape};
     use crate::math::vec2::Vec2;
+    use std::f64::consts::PI;
     const EPSILON: f64 = 1e-9;
+
+    // Helper function to create rectangle vertices (moved here)
+    fn create_rectangle_vertices(center_x: f64, center_y: f64, half_width: f64, half_height: f64) -> Vec<Vec2> {
+        vec![
+            Vec2::new(center_x - half_width, center_y - half_height),
+            Vec2::new(center_x + half_width, center_y - half_height),
+            Vec2::new(center_x + half_width, center_y + half_height),
+            Vec2::new(center_x - half_width, center_y + half_height),
+        ]
+    }
 
     // Corrected helper to create a dynamic body
     fn create_dynamic_body(shape: Shape, mass: f64, pos: Vec2) -> RigidBody {

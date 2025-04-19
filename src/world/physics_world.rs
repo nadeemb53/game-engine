@@ -12,8 +12,8 @@ use std::f64;
 // Positional Correction Constants
 
 // Associated constant, not used directly in methods yet.
-#[allow(dead_code)] // Allow while unused
-const RESTITUTION: f64 = 0.7; // Default restitution coefficient
+#[allow(dead_code)]
+const RESTITUTION: f64 = 0.7;
 
 pub struct PhysicsWorld {
     pub bodies: Vec<RigidBody>,
@@ -26,18 +26,18 @@ pub struct PhysicsWorld {
 }
 
 impl PhysicsWorld {
-    const COLLISION_ITERATIONS: usize = 10; // Number of iterations for collision resolution
-    const POSITIONAL_CORRECTION_PERCENT: f64 = 0.2; // Penetration percentage to correct per iteration (typically 20-80%)
-    const POSITIONAL_CORRECTION_SLOP: f64 = 0.01; // Minimum penetration depth to correct (allows for some overlap)
+    const COLLISION_ITERATIONS: usize = 10;
+    const POSITIONAL_CORRECTION_PERCENT: f64 = 0.2;
+    const POSITIONAL_CORRECTION_SLOP: f64 = 0.01;
 
     /// Creates a new, empty physics world with default settings.
     pub fn new() -> Self {
         Self {
             bodies: Vec::new(),
             constraints: Vec::new(),
-            gravity: Vec2::new(0.0, 981.0), // Adjusted gravity to be positive y-down
-            solver_iterations: 16, // Increased iterations for stability
-            contacts: Vec::new(), // Initialize contacts
+            gravity: Vec2::new(0.0, 981.0),
+            solver_iterations: 16,
+            contacts: Vec::new(),
         }
     }
 
@@ -111,7 +111,7 @@ impl PhysicsWorld {
         // Get mutable references using split_at_mut to satisfy the borrow checker on stable
         let (body_a_slice, body_b_slice) = self.bodies.split_at_mut(manifold.body_b_idx);
         let body_a = &mut body_a_slice[manifold.body_a_idx];
-        let body_b = &mut body_b_slice[0]; // body_b is the first element in the second slice
+        let body_b = &mut body_b_slice[0];
 
         if should_log {
             println!("--- Applying Impulse ---");
@@ -120,9 +120,9 @@ impl PhysicsWorld {
             println!("  Body B: Vel={:?}, AngVel={:.3}, InvMass={:.3}, InvInertia={:.3}", body_b.linear_velocity, body_b.angular_velocity, body_b.inv_mass, body_b.inv_inertia);
         }
 
-        let contact_point = manifold.contact.point_a; // Use point_a as reference contact point
-        let r_a = contact_point - body_a.position; // Vector from CoM A to contact
-        let r_b = contact_point - body_b.position; // Vector from CoM B to contact
+        let contact_point = manifold.contact.point_a;
+        let r_a = contact_point - body_a.position;
+        let r_b = contact_point - body_b.position;
 
         // Calculate relative velocity at the contact point
         let v_a = body_a.linear_velocity + Vec2::new(-r_a.y, r_a.x) * body_a.angular_velocity;
@@ -172,8 +172,8 @@ impl PhysicsWorld {
             println!("  Effective Mass Normal: {:.3}", effective_mass_normal);
             println!("  Impulse Magnitude (j): {:.3}", j);
             println!("  Impulse Vector: {:?}", impulse);
-            println!("  Body A Pre Vel: {:?}", body_a.linear_velocity + impulse * body_a.inv_mass); // Calculate pre-impulse vel for logging
-            println!("  Body B Pre Vel: {:?}", body_b.linear_velocity - impulse * body_b.inv_mass); // Calculate pre-impulse vel for logging
+            println!("  Body A Pre Vel: {:?}", body_a.linear_velocity + impulse * body_a.inv_mass);
+            println!("  Body B Pre Vel: {:?}", body_b.linear_velocity - impulse * body_b.inv_mass);
             println!("  Body A New Vel: {:?}", body_a.linear_velocity);
             println!("  Body A New AngVel: {:.3}", body_a.angular_velocity);
             println!("  Body B New Vel: {:?}", body_b.linear_velocity);
@@ -189,14 +189,14 @@ impl PhysicsWorld {
             println!("  Manifold: Normal={:?}, Depth={:.3}, A={}, B={}", manifold.normal, manifold.depth, manifold.body_a_idx, manifold.body_b_idx);
         }
 
-        const PERCENT: f64 = PhysicsWorld::POSITIONAL_CORRECTION_PERCENT; // Penetration percentage to correct
-        const SLOP: f64 = PhysicsWorld::POSITIONAL_CORRECTION_SLOP; // Allowable penetration/slop
+        const PERCENT: f64 = PhysicsWorld::POSITIONAL_CORRECTION_PERCENT;
+        const SLOP: f64 = PhysicsWorld::POSITIONAL_CORRECTION_SLOP;
 
         // Calculate the amount of correction needed
         let correction_magnitude = (manifold.depth - SLOP).max(0.0);
         if correction_magnitude < 1e-9 {
             if should_log { println!("  Correction magnitude ({:.3}) too small, skipping.", correction_magnitude); }
-            return; // No correction needed if penetration is within slop or negligible
+            return;
         }
 
         // Get mutable references using split_at_mut
@@ -244,7 +244,7 @@ impl PhysicsWorld {
 
         // 1. Apply gravity
         for body in self.bodies.iter_mut() {
-            if body.inv_mass > 0.0 { // Don't apply gravity to static bodies
+            if body.inv_mass > 0.0 {
                 let gravity_force = self.gravity * body.mass;
                 body.apply_force(gravity_force);
             }
@@ -291,7 +291,7 @@ impl PhysicsWorld {
         // println!("--- Finished Constraint Solving ---"); // COMMENTED OUT
 
         // 6. Positional Correction (to prevent sinking)
-        for manifold in &contacts_clone { // Use the clone again
+        for manifold in &contacts_clone {
             self.apply_positional_correction(manifold, should_log_collisions);
         }
         self.contacts.clear();
@@ -314,6 +314,7 @@ impl Default for PhysicsWorld {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shapes::{Circle, LineSegment};
     const EPSILON: f64 = 1e-9;
 
     // Helper
@@ -328,13 +329,13 @@ mod tests {
         assert!(world.constraints.is_empty());
         assert_eq!(world.gravity, Vec2::new(0.0, 981.0));
         assert_eq!(world.solver_iterations, 16);
-        assert!(world.contacts.is_empty()); // Check contacts init
+        assert!(world.contacts.is_empty());
     }
 
     #[test]
     fn test_add_body() {
         let mut world = PhysicsWorld::new();
-        let body1 = RigidBody::new(1.0, default_test_shape()); // Use helper
+        let body1 = RigidBody::new(1.0, default_test_shape());
         let body2 = RigidBody::new(2.0, default_test_shape());
         let idx1 = world.add_body(body1);
         let idx2 = world.add_body(body2);
@@ -366,7 +367,7 @@ mod tests {
     fn test_step_gravity() {
         let mut world = PhysicsWorld::new();
         world.gravity = Vec2::new(0.0, -10.0);
-        let idx = world.add_body(RigidBody::new(1.0, default_test_shape())); // Use helper
+        let idx = world.add_body(RigidBody::new(1.0, default_test_shape()));
         let dt = 0.1;
 
         world.step(dt, false);
@@ -380,7 +381,7 @@ mod tests {
     fn test_step_no_gravity_on_static() {
         let mut world = PhysicsWorld::new();
         world.gravity = Vec2::new(0.0, -10.0);
-        let idx = world.add_body(RigidBody::new(0.0, default_test_shape())); // Static
+        let idx = world.add_body(RigidBody::new(0.0, default_test_shape()));
         let initial_state = world.bodies[idx].clone();
         let dt = 0.1;
 
@@ -410,7 +411,7 @@ mod tests {
         // Due to changes in collision handling, the exact positions might vary
         // Check for approximate positioning instead:
         // 1. Bodies should be close to the expected positions
-        let tolerance = 0.2; // Increased tolerance for position variation
+        let tolerance = 0.2;
         assert!((world.bodies[idx_a].position.x + 1.0).abs() < tolerance, 
                "Body A x position too far from expected: {}", world.bodies[idx_a].position.x);
         assert!((world.bodies[idx_a].position.y).abs() < tolerance, 
@@ -453,7 +454,7 @@ mod tests {
         let mut world = PhysicsWorld::new();
         world.gravity = Vec2::new(0.0, -10.0);
         world.solver_iterations = 10;
-        let idx_static = world.add_body(RigidBody::new(0.0, default_test_shape())); // Static
+        let idx_static = world.add_body(RigidBody::new(0.0, default_test_shape()));
         let idx_bob = world.add_body(RigidBody::new(1.0, default_test_shape()));
         world.bodies[idx_static].position = Vec2::new(0.0, 0.0);
         world.bodies[idx_bob].position = Vec2::new(2.0, 0.0);
@@ -482,9 +483,9 @@ mod tests {
         let shape_b = Shape::Circle(Circle::new(1.0));
         let shape_c = Shape::Circle(Circle::new(0.5));
 
-        let idx_a = world.add_body(RigidBody::new(1.0, shape_a)); // Circle at (0,0)
-        let idx_b = world.add_body(RigidBody::new(1.0, shape_b)); // Circle at (1.5,0) - Collides with A
-        let idx_c = world.add_body(RigidBody::new(1.0, shape_c)); // Circle at (5,0) - No collision
+        let idx_a = world.add_body(RigidBody::new(1.0, shape_a));
+        let idx_b = world.add_body(RigidBody::new(1.0, shape_b));
+        let idx_c = world.add_body(RigidBody::new(1.0, shape_c));
 
         world.bodies[idx_b].position = Vec2::new(1.5, 0.0);
         world.bodies[idx_c].position = Vec2::new(5.0, 0.0);
@@ -545,7 +546,7 @@ mod tests {
 
         // Verify final separation
         let final_dist = (pos_b - pos_a).magnitude();
-        let expected_dist = expected_pos_b.x - expected_pos_a.x; // 0.599 - (-0.599) = 1.198
+        let expected_dist = expected_pos_b.x - expected_pos_a.x;
         assert!((final_dist - expected_dist).abs() < EPSILON, "Final distance mismatch: expected {}, got {}", expected_dist, final_dist);
     }
 
@@ -573,7 +574,7 @@ mod tests {
     #[test]
     fn test_world_line_line_collision() {
         let mut world = PhysicsWorld::new();
-        world.gravity = Vec2::new(0.0, 0.0); // Disable gravity for precise intersection test
+        world.gravity = Vec2::new(0.0, 0.0);
 
         let line_shape_a = Shape::Line(LineSegment::new(Vec2::new(-1.0, -1.0), Vec2::new(1.0, 1.0)));
         let line_shape_b = Shape::Line(LineSegment::new(Vec2::new(-1.0, 1.0), Vec2::new(1.0, -1.0)));
@@ -608,8 +609,8 @@ mod tests {
     fn test_world_line_line_no_collision() {
         let mut world = PhysicsWorld::new();
 
-        let line_shape_a = Shape::Line(LineSegment::new(Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0))); // Horizontal line at y=0
-        let line_shape_b = Shape::Line(LineSegment::new(Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0))); // Horizontal line at y=1
+        let line_shape_a = Shape::Line(LineSegment::new(Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0)));
+        let line_shape_b = Shape::Line(LineSegment::new(Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0)));
 
         let body_a = RigidBody{ position: Vec2::new(0.0, 0.0), ..RigidBody::new(1.0, line_shape_a) };
         let body_b = RigidBody{ position: Vec2::new(0.0, 1.0), ..RigidBody::new(1.0, line_shape_b) };
@@ -617,7 +618,7 @@ mod tests {
         world.add_body(body_a);
         world.add_body(body_b);
 
-        world.step(0.01, false); // Step to trigger collision detection
+        world.step(0.01, false);
 
         assert!(world.contacts.is_empty());
     }
@@ -625,9 +626,9 @@ mod tests {
     #[test]
     fn test_resolve_collisions_impulse_head_on() {
         let mut world = PhysicsWorld::new();
-        let shape = Shape::Circle(Circle::new(1.0)); // Radius 1
-        let idx_a = world.add_body(RigidBody::new(1.0, shape.clone())); // Mass 1, inv_mass 1
-        let idx_b = world.add_body(RigidBody::new(1.0, shape.clone())); // Mass 1, inv_mass 1
+        let shape = Shape::Circle(Circle::new(1.0));
+        let idx_a = world.add_body(RigidBody::new(1.0, shape.clone()));
+        let idx_b = world.add_body(RigidBody::new(1.0, shape.clone()));
 
         // Setup: Body A moving right, Body B moving left, about to collide at origin
         world.bodies[idx_a].position = Vec2::new(-1.0 - EPSILON, 0.0);
@@ -641,21 +642,21 @@ mod tests {
         let manifold = CollisionManifold {
             body_a_idx: idx_a,
             body_b_idx: idx_b,
-            normal: Vec2::new(1.0, 0.0), // Normal pointing from A to B
-            depth: 0.0, // Assume just touching for impulse test
+            normal: Vec2::new(1.0, 0.0),
+            depth: 0.0,
             contact: crate::collision::manifold::ContactPoint { point_a: Vec2::new(0.0, 0.0), point_b: Vec2::new(0.0, 0.0) }
         };
 
         // Apply the impulse directly
-        world.apply_collision_impulse(&manifold, true); // Enable logging for this test
+        world.apply_collision_impulse(&manifold, true);
 
         // Calculate expected velocities after impulse
         // v_a = 10, v_b = -10
         // v_rel = v_b - v_a = -10 - 10 = -20
         // normal = (1, 0)
         // v_normal = v_rel . normal = -20
-        // r_a = contact - pos_a = (0,0) - (-1,0) = (1,0)  <- Mistake: position is -1-eps, contact is 0. r_a = 0 - (-1) = 1 approx.
-        // r_b = contact - pos_b = (0,0) - (1,0) = (-1,0) <- Mistake: position is 1+eps, contact is 0. r_b = 0 - 1 = -1 approx.
+        // r_a = contact - pos_a = (0,0) - (-1,0) = (1,0)  <- Mistake: position is -1-eps, contact is 0. r_a = 1 approx.
+        // r_b = contact - pos_b = (0,0) - (1,0) = (-1,0) <- Mistake: position is 1+eps, contact is 0. r_b = -1 approx.
         // Let's re-evaluate r_a and r_b based on manifold contact point and body positions.
         // In a real collision, contact point might not be exactly 0,0 if bodies interpenetrate slightly before step resolves.
         // However, for this test, we defined contact point as (0,0). So r_a = (0,0) - (-1) = 1 and r_b = 0 - 1 = -1 is correct for the test setup.
@@ -670,8 +671,8 @@ mod tests {
         // final_v_a = initial_v_a - impulse_vec * inv_mass_a = (10, 0) - (12, 0) * 1 = (-2, 0)
         // final_v_b = initial_v_b + impulse_vec * inv_mass_b = (-10, 0) + (12, 0) * 1 = (2, 0)
 
-        let expected_v_a = Vec2::new(-2.0, 0.0); // Updated expected value
-        let expected_v_b = Vec2::new(2.0, 0.0);  // Updated expected value
+        let expected_v_a = Vec2::new(-2.0, 0.0);
+        let expected_v_b = Vec2::new(2.0, 0.0);
 
         println!("[test_resolve_collisions_impulse_head_on]");
         println!("  Body A Actual Vel: {:?}", world.bodies[idx_a].linear_velocity);
